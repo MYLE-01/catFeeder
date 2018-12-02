@@ -1,0 +1,96 @@
+sensor:
+#=======================================================================
+#
+#=======================================================================  
+  - platform: mqtt
+    name: 'cats last fed mqtt'
+    state_topic: 'home/catfeeder/lastfed'
+  - platform: mqtt
+    name: 'Cat Feed Remaining'
+    state_topic: 'home/catfeeder/remaining'   
+    unit_of_measurement: '%'
+  - platform: template
+    sensors:
+      cats_fed:
+        friendly_name: "Cats Fed at : "
+        value_template: "{{ as_timestamp(states.sensor.cats_last_fed_mqtt.state) | timestamp_custom(' %d/%m %H:%M ')  }}"
+  - platform: mqtt
+    name: 'Feeded by'
+    state_topic: 'home/catfeeder/by'
+
+script: 
+#=======================================================================
+# feed_the_cat
+#=======================================================================       
+  feed_the_cat:  # unique script id
+    alias: Feed the cats
+    sequence:
+      - service: mqtt.publish        
+        data_template:
+          topic: 'home/catfeeder/feed'
+          payload: 'feed'   
+#=======================================================================
+# feed_the_cat
+#=======================================================================       
+  feed_cleaner:  # unique script id
+    alias: Feed Cleaner
+    sequence:
+      - service: mqtt.publish        
+        data_template:
+          topic: 'home/catfeeder/feed'
+          payload: 'clean'        
+automation:
+#=======================================================================
+# Feed My Cats 17:30
+#=======================================================================
+- id: 'Feed My Cats 17:30'
+  alias: "Feed My Cats 17:30"
+  initial_state: true
+  trigger:
+    platform: time
+    at: '17:30'
+  action:
+    - service: script.turn_on
+      entity_id: script.feed_the_cat
+    - service: mqtt.publish
+      data:
+        topic: "home/catfeeder/by"
+        payload: "17:30 Timer"
+    - service: notify.stephan_phone
+      data:
+        title: "Home Assistant"
+        message: "Just Feed the Cats"
+    
+
+#=======================================================================
+# Feed My Cats 07:30
+#=======================================================================
+- id: 'Feed My Cats 07:30'
+  alias: "Feed My Cats 07:30"
+  initial_state: true
+  trigger:
+    platform: time
+    at: '07:30'
+  action:
+    - service: script.turn_on
+      entity_id: script.feed_the_cat
+    - service: mqtt.publish
+      data:
+        topic: "home/catfeeder/by"
+        payload: "07:30 Timer"
+    - service: notify.stephan_phone
+      data:
+        title: "Home Assistant"
+        message: "Just Feed the Cats"
+#=======================================================================
+# Old Grouping 
+#=======================================================================
+group:
+  catfeeder:
+    icon: mdi:paw
+    name: CatFeeder
+    entities:
+      - script.feed_the_cat
+      - sensor.catfeeder_remaining
+      - sensor.cats_fed
+      
