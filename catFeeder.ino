@@ -6,8 +6,8 @@
 #include <NTPClient.h>
 
 // wifi
-const char* ssid = "MYLE-2"; //type your WIFI information inside the quotes
-const char* password = "e1e96a4801";
+const char* ssid = "REPLACEME"; //type your WIFI information inside the quotes
+const char* password = "REPLACEME";
 WiFiClient espClient;
 // wifi UDP for NTP, we dont have real time and we dont trust http headers :)
 WiFiUDP ntpUDP;
@@ -19,9 +19,9 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 #define SENSORNAME "CatFeeder" //change this to whatever you want to call your device
 
 // MQTT
-const char* mqtt_server = "192.168.1.240"; // IP address or dns of the mqtt
-const char* mqtt_username = "mqttuser"; //
-const char* mqtt_password = "2314";
+const char* mqtt_server = "REPLACEME"; // IP address or dns of the mqtt
+const char* mqtt_username = "REPLACEME"; //
+const char* mqtt_password = "REPLACEME";
 const int mqtt_port = 1883; //REPLACEME, usually not?
 PubSubClient client(espClient);
 // MQTT TOPICS (change these topics as you wish) 
