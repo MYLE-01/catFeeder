@@ -68,3 +68,8 @@ to the MQTT command channel, which if you dont change anything is
 
 you can use the script i provided under the HASS folder.
 
+if you use my Lovelace bit
+you nee to add
+	  - url: /local/custom-lovelace/fold-entity-row.js?v=0636ee
+    	    type: js
+to the top of the lovelace file
