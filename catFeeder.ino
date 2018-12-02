@@ -6,40 +6,35 @@
 #include <NTPClient.h>
 
 // wifi
-const char* ssid = "REPLACEME"; //type your WIFI information inside the quotes
-const char* password = "REPLACEME";
+const char* ssid = "MYLE-2"; //type your WIFI information inside the quotes
+const char* password = "e1e96a4801";
 WiFiClient espClient;
-
 // wifi UDP for NTP, we dont have real time and we dont trust http headers :)
 WiFiUDP ntpUDP;
-#define NTP_OFFSET   60 * 60      // In seconds
+#define NTP_DST 3600 // DST Off set 3600 = 1 hour
+#define NTP_OFFSET   43200 + NTP_DST  // 60 * 60      // In seconds
 #define NTP_INTERVAL 60 * 1000    // In miliseconds
 #define NTP_ADDRESS  "europe.pool.ntp.org"
 NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
-
-// OTA
 #define SENSORNAME "CatFeeder" //change this to whatever you want to call your device
-#define OTApassword "REPLACEME" //the password you will need to enter to upload remotely via the ArduinoIDE yourOTApassword
-int OTAport = 8266;
 
 // MQTT
-const char* mqtt_server = "REPLACEME"; // IP address or dns of the mqtt
-const char* mqtt_username = "REPLACEME"; //
-const char* mqtt_password = "REPLACEME";
+const char* mqtt_server = "192.168.1.240"; // IP address or dns of the mqtt
+const char* mqtt_username = "mqttuser"; //
+const char* mqtt_password = "2314";
 const int mqtt_port = 1883; //REPLACEME, usually not?
 PubSubClient client(espClient);
 // MQTT TOPICS (change these topics as you wish) 
 const char* lastfed_topic = "home/catfeeder/lastfed"; // UTF date
 const char* remaining_topic = "home/catfeeder/remaining"; //Remain % fix distance above
 const char* feed_topic = "home/catfeeder/feed";  // command topic
+const char* feed_by = "home/catfeeder/by";
+const int stepsPerRevolution = 200;  
+const int stepsPerDose = 75;
+Stepper myStepper(stepsPerRevolution, D1,D2,D3,D4);  
 
-// stepper
-const int steps = 200; //REPLACEME this is the number of steps of the motor for a 360° rotation.
-const int stepsPerDose = 50; //REPLACEME as you wish, mine was perfect at about 45-50 steps
-Stepper myStepper(steps, D1, D3, D2, D4); // you may want to REPLACEME this based on how you cabled the motor.
 int enA = D5;
 int enB = D6;
-//int motorPower = 990; // legacy.. for using pwm
 
 // ultrasonic
 long t;
@@ -53,38 +48,24 @@ float max_food = 23.50;  // REPLACEME in cm? seems to be "about" right
 const int buttonPin = 3;     // number of the pushbutton pin (RX, cause no other IO was available)
 
 
-void setup() {
-  // Serial setup
-  Serial.begin(115200);
-  
+
+void setup() {  
   // pins setup
-  pinMode(enA, OUTPUT);
-  pinMode(enB, OUTPUT);
   pinMode(trigger, OUTPUT);
   pinMode(echo, INPUT);
-  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LEDs  pin as an output
-  pinMode(2, OUTPUT); // ^ other led
-    
   pinMode(buttonPin, INPUT_PULLUP);  // initialize the pushbutton pin as an input:
-  
   // Wifi connection setup
   setup_wifi();
   timeClient.begin();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
+  pinMode(enA, OUTPUT);
+  pinMode(enB, OUTPUT);
+    // stepper speed
+  myStepper.setSpeed(60);
+  // Serial setup
+  // Serial.begin(9600);
 
-  // Turn OFF builtin leds
-  digitalWrite(BUILTIN_LED, HIGH);
-  digitalWrite(2, HIGH);
-
-  // stepper speed
-  myStepper.setSpeed(55);
-
-  // OTA setup
-  ArduinoOTA.setHostname(SENSORNAME);
-  ArduinoOTA.setPort(OTAport);
-  ArduinoOTA.setPassword((const char *)OTApassword);
-  ArduinoOTA.begin();
 }
 
 void setup_wifi() {
@@ -110,6 +91,7 @@ void setup_wifi() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 }
+
 /********************************** START CALLBACK*****************************************/
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -131,20 +113,30 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Feeding cats...");
     Serial.println();
     feedCats();    
+  } else if (strcmp(message,"clean") == 0)  {
+    Serial.print("Clean ...");
+    Serial.println();
+
+    cleanFeeder();
+    client.publish(feed_by, "CLEAN" );
+    timeClient.update();   // could this fail?
+    String formattedTime = timeClient.getFullFormattedTime();
+    char charBuf[20];
+    formattedTime.toCharArray(charBuf, 20);
+    client.publish(lastfed_topic, charBuf ); // Publishing time of feeding to MQTT Sensor
   } else {
     Serial.print("Unknown Message");
     Serial.println();
-  }
+    }
 }
 
 // feeds cats
 void feedCats() {
-  digitalWrite(2, LOW); // Turn on onboard LED
-  digitalWrite(enA, HIGH);  // Enable motors, i dont see the point in pwm with a stepper?
-  digitalWrite(enB, HIGH);
+  analogWrite(enA, 700);
+  analogWrite(enB, 700);
   myStepper.step(stepsPerDose);
-  digitalWrite(enA, LOW);
-  digitalWrite(enB, LOW);
+  analogWrite(enA, 0);
+  analogWrite(enB, 0);
   delay(2000); // you may wanna change this based on how many times you press te button continously 
   timeClient.update();   // could this fail?
   String formattedTime = timeClient.getFullFormattedTime();
@@ -154,8 +146,7 @@ void feedCats() {
   Serial.print("Fed at: ");
   Serial.print(charBuf);
   Serial.println();
-  digitalWrite(2, HIGH); // Turn off onboard LED
-  calcRemainingFood();
+  // calcRemainingFood();
 }
 
 // calc remaining food in %
@@ -189,13 +180,14 @@ void calcRemainingFood() {
 
 // clean feeder
 void cleanFeeder() {
-  analogWrite(enA, motorPower);
-  analogWrite(enB, motorPower);
-  myStepper.step(400); // should be plenty
+  analogWrite(enA, 700);
+  analogWrite(enB, 700);
+  myStepper.step((stepsPerDose*4));
+  delay(500);
+  myStepper.step(-(stepsPerDose*4));
   analogWrite(enA, 0);
   analogWrite(enB, 0);
-  delay(1000);
-}
+  delay(500);}
 
 
 void reconnect() {
@@ -218,11 +210,12 @@ void reconnect() {
 }
 
 void loop() {
-  ArduinoOTA.handle();
-  // Check for buttonpin push
+
+    // Check for buttonpin push
   if (digitalRead(buttonPin) == LOW) {       
     Serial.println("Button pushed, feeding cats...");
     feedCats();
+    client.publish(feed_by, "Button Press" );
   }
   if (!client.connected()) {
     reconnect();
