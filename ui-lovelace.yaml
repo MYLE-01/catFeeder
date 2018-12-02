@@ -1,0 +1,18 @@
+         type: entities
+         title: Cat Feeder
+         icon: mdi:paw
+         # show_header_toggle: false
+         entities:
+           - type: custom:fold-entity-row
+             head: sensor.cat_feed_remaining
+             icon: mdi:paw
+             items:
+               - automation.feed_my_cats_0730
+               - automation.feed_my_cats_1730
+               - script.feed_the_cat
+               - script.feed_cleaner
+           - entity: sensor.cats_fed
+             icon: mdi:cat
+             secondary_info: last-changed 
+           - entity: sensor.feeded_by
+             icon: mdi:bowl
