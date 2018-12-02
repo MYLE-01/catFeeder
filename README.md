@@ -76,4 +76,5 @@ you nee to add
 ```
 
 to the top of the lovelace file
-![]Images/catfeederex.PNG
+![](Images/catfeederex.PNG)
+
