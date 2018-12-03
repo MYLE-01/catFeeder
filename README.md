@@ -1,4 +1,4 @@
-# I have added Doesing to This Version
+# I have added Doseing to This Version
 with a input select
 
 # MQTT catFeeder
