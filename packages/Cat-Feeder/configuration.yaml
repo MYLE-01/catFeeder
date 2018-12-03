@@ -17,7 +17,14 @@ sensor:
   - platform: mqtt
     name: 'Feeded by'
     state_topic: 'home/catfeeder/by'
-
+input_number:
+  cat_feed_doese:
+    name: Cat Feed Doese
+    icon: mdi:format-list-numbers
+    min: 0
+    max: 10
+    step: 1
+    initial: 3
 script: 
 #=======================================================================
 # feed_the_cat
@@ -28,7 +35,7 @@ script:
       - service: mqtt.publish        
         data_template:
           topic: 'home/catfeeder/feed'
-          payload: 'feed'   
+          payload_template: '{{states.input_number.cat_feed_doese.state|int}}:feed'   
 #=======================================================================
 # feed_the_cat
 #=======================================================================       
