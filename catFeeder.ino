@@ -30,7 +30,8 @@ const char* remaining_topic = "home/catfeeder/remaining"; //Remain % fix distanc
 const char* feed_topic = "home/catfeeder/feed";  // command topic
 const char* feed_by = "home/catfeeder/by";
 const int stepsPerRevolution = 200;  
-const int stepsPerDose = 75;
+const int shots = 4;
+int stepsPerDose = (stepsPerRevolution / shots); 
 Stepper myStepper(stepsPerRevolution, D1,D2,D3,D4);  
 
 int enA = D5;
@@ -64,7 +65,7 @@ void setup() {
     // stepper speed
   myStepper.setSpeed(60);
   // Serial setup
-  // Serial.begin(9600);
+  //Serial.begin(9600);
 
 }
 
@@ -108,15 +109,22 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print(message);
   Serial.print("]");
   Serial.println();
-
-  if (strcmp(message,"feed") == 0) {
+  String messageString = String(message);
+  int doses = messageString.toInt();  
+  if (doses == 0 ){
+    doses = 1 ;
+  }
+  Serial.print("doses = ");
+  Serial.print(doses);
+  Serial.println();
+  
+  if (messageString.indexOf("feed") > 0) {
     Serial.print("Feeding cats...");
     Serial.println();
-    feedCats();    
+    feedCats(doses);    
   } else if (strcmp(message,"clean") == 0)  {
     Serial.print("Clean ...");
     Serial.println();
-
     cleanFeeder();
     client.publish(feed_by, "CLEAN" );
     timeClient.update();   // could this fail?
@@ -131,10 +139,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 // feeds cats
-void feedCats() {
+void feedCats(int Dosees) {
+  int ii;
   analogWrite(enA, 700);
   analogWrite(enB, 700);
-  myStepper.step(stepsPerDose);
+  for ( ii=0; ii < Dosees; ii++){
+    myStepper.step(stepsPerDose);
+  }
   analogWrite(enA, 0);
   analogWrite(enB, 0);
   delay(2000); // you may wanna change this based on how many times you press te button continously 
@@ -146,7 +157,7 @@ void feedCats() {
   Serial.print("Fed at: ");
   Serial.print(charBuf);
   Serial.println();
-  // calcRemainingFood();
+  calcRemainingFood();
 }
 
 // calc remaining food in %
@@ -182,9 +193,11 @@ void calcRemainingFood() {
 void cleanFeeder() {
   analogWrite(enA, 700);
   analogWrite(enB, 700);
-  myStepper.step((stepsPerDose*4));
+  myStepper.step((stepsPerDose * shots));
   delay(500);
-  myStepper.step(-(stepsPerDose*4));
+  myStepper.step(-(stepsPerDose * shots));
+  delay(500);
+  myStepper.step((stepsPerDose * shots));
   analogWrite(enA, 0);
   analogWrite(enB, 0);
   delay(500);}
@@ -208,14 +221,39 @@ void reconnect() {
     }
   }
 }
+// My bits
+// So Ican Split the Incomming Message
+// https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
+
+String getValue(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = { 0, -1 };
+    int maxIndex = data.length() - 1;
+
+    for (int i = 0; i <= maxIndex && found <= index; i++) {
+        if (data.charAt(i) == separator || i == maxIndex) {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i+1 : i;
+        }
+    }
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
 
 void loop() {
 
     // Check for buttonpin push
   if (digitalRead(buttonPin) == LOW) {       
     Serial.println("Button pushed, feeding cats...");
-    feedCats();
+    feedCats(2);
+    calcRemainingFood();
     client.publish(feed_by, "Button Press" );
+    timeClient.update();   // could this fail?
+    String formattedTime = timeClient.getFullFormattedTime();
+    char charBuf[20];
+    formattedTime.toCharArray(charBuf, 20);
+    client.publish(lastfed_topic, charBuf ); // Publishing time of feeding to MQTT Sensor
   }
   if (!client.connected()) {
     reconnect();
