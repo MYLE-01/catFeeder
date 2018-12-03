@@ -1,3 +1,6 @@
+# I have added Doesing to This Version
+with a input select
+
 # MQTT catFeeder
 catFeeder is an Arduino (ESP8266) MQTT controlled cat feeder which I use to feed my cats when I'm away or in the bed at 6.30 AM on a Sunday morning.
 	The project is forked upon https://github.com/jorgerance/catFeeder which usees a telegram bot.
