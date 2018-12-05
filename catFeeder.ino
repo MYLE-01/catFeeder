@@ -145,6 +145,7 @@ void feedCats(int Dosees) {
   analogWrite(enB, 700);
   for ( ii=0; ii < Dosees; ii++){
     myStepper.step(stepsPerDose);
+    delay(500);
   }
   analogWrite(enA, 0);
   analogWrite(enB, 0);
@@ -220,25 +221,6 @@ void reconnect() {
       delay(5000);
     }
   }
-}
-// My bits
-// So Ican Split the Incomming Message
-// https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
-
-String getValue(String data, char separator, int index)
-{
-    int found = 0;
-    int strIndex[] = { 0, -1 };
-    int maxIndex = data.length() - 1;
-
-    for (int i = 0; i <= maxIndex && found <= index; i++) {
-        if (data.charAt(i) == separator || i == maxIndex) {
-            found++;
-            strIndex[0] = strIndex[1] + 1;
-            strIndex[1] = (i == maxIndex) ? i+1 : i;
-        }
-    }
-    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
 void loop() {
